@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unix ファイルパーミッション 8進数 計算機</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen p-4">
+<div class="max-w-3xl mx-auto">
+  <h1 class="text-2xl font-bold mb-4 text-gray-800">Unix ファイルパーミッション 8進数 計算機</h1>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+    <!-- Octal Input -->
+    <div class="bg-white rounded-lg shadow p-4">
+      <h2 class="text-lg font-semibold mb-3 text-gray-700">8進数入力</h2>
+      <div class="flex items-center gap-2 mb-4">
+        <label for="octalInput" class="text-sm font-medium text-gray-700">chmod:</label>
+        <input id="octalInput" type="text" maxlength="4" class="w-24 border rounded px-3 py-2 text-lg font-mono text-center" value="755" oninput="fromOctal()" aria-label="8進数パーミッション入力">
+        <span class="text-sm text-gray-500">（例: 755, 644, 0755）</span>
+      </div>
+
+      <!-- Special bits -->
+      <div class="mb-3 p-3 bg-gray-50 rounded">
+        <div class="text-sm font-medium text-gray-700 mb-2">特殊ビット:</div>
+        <div class="flex gap-4">
+          <label class="flex items-center gap-1 text-sm cursor-pointer">
+            <input type="checkbox" id="setuid" onchange="fromCheckboxes()" aria-label="Setuid"> Setuid (s)
+          </label>
+          <label class="flex items-center gap-1 text-sm cursor-pointer">
+            <input type="checkbox" id="setgid" onchange="fromCheckboxes()" aria-label="Setgid"> Setgid (s)
+          </label>
+          <label class="flex items-center gap-1 text-sm cursor-pointer">
+            <input type="checkbox" id="sticky" onchange="fromCheckboxes()" aria-label="Sticky bit"> Sticky (t)
+          </label>
+        </div>
+      </div>
+
+      <!-- Permission checkboxes -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="bg-gray-50">
+              <th class="p-2 text-left">対象</th>
+              <th class="p-2 text-center">r (4)</th>
+              <th class="p-2 text-center">w (2)</th>
+              <th class="p-2 text-center">x (1)</th>
+              <th class="p-2 text-center">値</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="border-b">
+              <td class="p-2 font-medium">所有者 (u)</td>
+              <td class="p-2 text-center"><input type="checkbox" id="ur" onchange="fromCheckboxes()" aria-label="所有者 読み込み"></td>
+              <td class="p-2 text-center"><input type="checkbox" id="uw" onchange="fromCheckboxes()" aria-label="所有者 書き込み"></td>
+              <td class="p-2 text-center"><input type="checkbox" id="ux" onchange="fromCheckboxes()" aria-label="所有者 実行"></td>
+              <td class="p-2 text-center font-mono" id="uval">7</td>
+            </tr>
+            <tr class="border-b">
+              <td class="p-2 font-medium">グループ (g)</td>
+              <td class="p-2 text-center"><input type="checkbox" id="gr" onchange="fromCheckboxes()" aria-label="グループ 読み込み"></td>
+              <td class="p-2 text-center"><input type="checkbox" id="gw" onchange="fromCheckboxes()" aria-label="グループ 書き込み"></td>
+              <td class="p-2 text-center"><input type="checkbox" id="gx" onchange="fromCheckboxes()" aria-label="グループ 実行"></td>
+              <td class="p-2 text-center font-mono" id="gval">5</td>
+            </tr>
+            <tr>
+              <td class="p-2 font-medium">その他 (o)</td>
+              <td class="p-2 text-center"><input type="checkbox" id="or" onchange="fromCheckboxes()" aria-label="その他 読み込み"></td>
+              <td class="p-2 text-center"><input type="checkbox" id="ow" onchange="fromCheckboxes()" aria-label="その他 書き込み"></td>
+              <td class="p-2 text-center"><input type="checkbox" id="ox" onchange="fromCheckboxes()" aria-label="その他 実行"></td>
+              <td class="p-2 text-center font-mono" id="oval">5</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Result -->
+    <div class="bg-white rounded-lg shadow p-4">
+      <h2 class="text-lg font-semibold mb-3 text-gray-700">変換結果</h2>
+
+      <div class="mb-4 p-3 bg-blue-50 rounded">
+        <div class="text-xs text-gray-500 mb-1">rwx 表記:</div>
+        <div id="rwxDisplay" class="text-2xl font-mono font-bold text-blue-800"></div>
+      </div>
+
+      <div class="mb-4 p-3 bg-gray-50 rounded">
+        <div class="text-xs text-gray-500 mb-1">chmod コマンド:</div>
+        <div class="flex items-center gap-2">
+          <code id="chmodCmd" class="text-sm font-mono text-gray-800 flex-1"></code>
+          <button onclick="copyChmod()" class="text-xs text-blue-600 hover:text-blue-800 shrink-0" aria-label="chmodコマンドをコピー">コピー</button>
+        </div>
+      </div>
+
+      <div class="mb-4 p-3 bg-gray-50 rounded">
+        <div class="text-xs text-gray-500 mb-1">詳細説明:</div>
+        <div id="description" class="text-sm text-gray-700 space-y-1"></div>
+      </div>
+
+      <!-- Umask -->
+      <div class="p-3 bg-yellow-50 rounded border border-yellow-200">
+        <h3 class="text-sm font-semibold text-yellow-800 mb-2">umask 計算</h3>
+        <div class="flex items-center gap-2 mb-2">
+          <label for="umaskInput" class="text-sm text-gray-600">umask:</label>
+          <input id="umaskInput" type="text" maxlength="4" value="022" class="w-20 border rounded px-2 py-1 text-sm font-mono text-center" oninput="calcUmask()" aria-label="umask値">
+        </div>
+        <div id="umaskResult" class="text-sm text-gray-700"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Reference -->
+  <div class="bg-white rounded-lg shadow p-4">
+    <h2 class="text-lg font-semibold mb-3 text-gray-700">よく使う設定 早見表</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr class="bg-gray-50"><th class="p-2 text-left">8進数</th><th class="p-2 text-left">rwx表記</th><th class="p-2 text-left">用途</th><th class="p-2"></th></tr></thead>
+        <tbody id="quickRef"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+const QUICK_REF = [
+  ['644', 'rw-r--r--', '通常ファイル（所有者のみ書き込み可）'],
+  ['755', 'rwxr-xr-x', '実行可能ファイル・ディレクトリ（公開用）'],
+  ['700', 'rwx------', 'プライベートディレクトリ（所有者のみ）'],
+  ['600', 'rw-------', '秘密鍵・パスワードファイル'],
+  ['666', 'rw-rw-rw-', '全ユーザー読み書き可（実行不可）'],
+  ['777', 'rwxrwxrwx', '全権限（セキュリティリスク・通常は非推奨）'],
+  ['640', 'rw-r-----', '設定ファイル（グループ読み込みのみ）'],
+  ['750', 'rwxr-x---', 'スクリプト（グループ実行可・その他不可）'],
+  ['400', 'r--------', '読み取り専用（重要設定ファイル）'],
+  ['555', 'r-xr-xr-x', '読み取り・実行のみ（変更禁止）'],
+];
+
+function octalToRwx(oct) {
+  const bits = oct.toString(8).padStart(4, '0');
+  const special = parseInt(bits[0]);
+  const uv = parseInt(bits[1]);
+  const gv = parseInt(bits[2]);
+  const ov = parseInt(bits[3]);
+
+  function perm(val, hasSpecial, specialChar) {
+    const r = val & 4 ? 'r' : '-';
+    const w = val & 2 ? 'w' : '-';
+    const x = hasSpecial ? (val & 1 ? specialChar : specialChar.toUpperCase()) : (val & 1 ? 'x' : '-');
+    return r + w + x;
+  }
+
+  const setuid = special & 4;
+  const setgid = special & 2;
+  const sticky = special & 1;
+
+  return perm(uv, setuid, 's') + perm(gv, setgid, 's') + perm(ov, sticky, 't');
+}
+
+function updateDisplay(oct) {
+  const octalStr = oct.toString(8).padStart(4, '0').slice(-4);
+  const rwx = octalToRwx(oct);
+  document.getElementById('rwxDisplay').textContent = rwx;
+  document.getElementById('chmodCmd').textContent = `chmod ${octalStr.replace(/^0/, '')} <file>`;
+
+  const special = parseInt(octalStr[0]);
+  const uv = parseInt(octalStr[1]);
+  const gv = parseInt(octalStr[2]);
+  const ov = parseInt(octalStr[3]);
+
+  document.getElementById('uval').textContent = uv;
+  document.getElementById('gval').textContent = gv;
+  document.getElementById('oval').textContent = ov;
+
+  // Checkboxes
+  document.getElementById('ur').checked = !!(uv & 4);
+  document.getElementById('uw').checked = !!(uv & 2);
+  document.getElementById('ux').checked = !!(uv & 1);
+  document.getElementById('gr').checked = !!(gv & 4);
+  document.getElementById('gw').checked = !!(gv & 2);
+  document.getElementById('gx').checked = !!(gv & 1);
+  document.getElementById('or').checked = !!(ov & 4);
+  document.getElementById('ow').checked = !!(ov & 2);
+  document.getElementById('ox').checked = !!(ov & 1);
+  document.getElementById('setuid').checked = !!(special & 4);
+  document.getElementById('setgid').checked = !!(special & 2);
+  document.getElementById('sticky').checked = !!(special & 1);
+
+  // Description
+  const desc = document.getElementById('description');
+  desc.innerHTML = '';
+  const lines = [];
+  if (uv & 4) lines.push('所有者: 読み込み可');
+  if (uv & 2) lines.push('所有者: 書き込み可');
+  if (uv & 1) lines.push('所有者: 実行可');
+  if (gv & 4) lines.push('グループ: 読み込み可');
+  if (gv & 2) lines.push('グループ: 書き込み可');
+  if (gv & 1) lines.push('グループ: 実行可');
+  if (ov & 4) lines.push('その他: 読み込み可');
+  if (ov & 2) lines.push('その他: 書き込み可');
+  if (ov & 1) lines.push('その他: 実行可');
+  if (special & 4) lines.push('Setuid: 所有者権限で実行');
+  if (special & 2) lines.push('Setgid: グループ権限で実行');
+  if (special & 1) lines.push('Sticky: ディレクトリ削除制限');
+  lines.forEach(t => {
+    const div = document.createElement('div');
+    div.className = 'text-xs py-0.5';
+    div.textContent = '• ' + t;
+    desc.appendChild(div);
+  });
+  if (lines.length === 0) {
+    const div = document.createElement('div');
+    div.textContent = '（全権限なし）';
+    div.className = 'text-xs text-gray-400';
+    desc.appendChild(div);
+  }
+
+  calcUmask();
+}
+
+function fromOctal() {
+  const raw = document.getElementById('octalInput').value;
+  const v = parseInt(raw, 8);
+  if (isNaN(v)) return;
+  updateDisplay(v);
+}
+
+function fromCheckboxes() {
+  const u = (document.getElementById('ur').checked ? 4:0) + (document.getElementById('uw').checked ? 2:0) + (document.getElementById('ux').checked ? 1:0);
+  const g = (document.getElementById('gr').checked ? 4:0) + (document.getElementById('gw').checked ? 2:0) + (document.getElementById('gx').checked ? 1:0);
+  const o = (document.getElementById('or').checked ? 4:0) + (document.getElementById('ow').checked ? 2:0) + (document.getElementById('ox').checked ? 1:0);
+  const s = (document.getElementById('setuid').checked ? 4:0) + (document.getElementById('setgid').checked ? 2:0) + (document.getElementById('sticky').checked ? 1:0);
+  const oct = s * 512 + u * 64 + g * 8 + o;
+  document.getElementById('octalInput').value = oct.toString(8).padStart(4,'0');
+  updateDisplay(oct);
+}
+
+function calcUmask() {
+  const raw = document.getElementById('umaskInput').value;
+  const umask = parseInt(raw, 8);
+  if (isNaN(umask)) { document.getElementById('umaskResult').textContent = '無効な値です'; return; }
+  const fileDefault = 0o666 & ~umask;
+  const dirDefault = 0o777 & ~umask;
+  const el = document.getElementById('umaskResult');
+  el.textContent = '';
+  const div = document.createElement('div');
+  div.textContent = `ファイルデフォルト: ${fileDefault.toString(8).padStart(3,'0')} (${octalToRwx(fileDefault)})`;
+  const div2 = document.createElement('div');
+  div2.textContent = `ディレクトリデフォルト: ${dirDefault.toString(8).padStart(3,'0')} (${octalToRwx(dirDefault)})`;
+  el.appendChild(div);
+  el.appendChild(div2);
+}
+
+function copyChmod() {
+  const txt = document.getElementById('chmodCmd').textContent;
+  navigator.clipboard.writeText(txt);
+  event.target.textContent = 'コピー済！';
+  setTimeout(() => event.target.textContent = 'コピー', 1500);
+}
+
+function renderQuickRef() {
+  const tbody = document.getElementById('quickRef');
+  QUICK_REF.forEach(([oct, rwx, desc]) => {
+    const tr = document.createElement('tr');
+    tr.className = 'border-b hover:bg-gray-50 cursor-pointer';
+    tr.onclick = () => { document.getElementById('octalInput').value = oct; fromOctal(); };
+
+    const tdOct = document.createElement('td');
+    tdOct.className = 'p-2 font-mono font-bold';
+    tdOct.textContent = oct;
+
+    const tdRwx = document.createElement('td');
+    tdRwx.className = 'p-2 font-mono text-blue-700';
+    tdRwx.textContent = rwx;
+
+    const tdDesc = document.createElement('td');
+    tdDesc.className = 'p-2 text-gray-600';
+    tdDesc.textContent = desc;
+
+    const tdBtn = document.createElement('td');
+    tdBtn.className = 'p-2';
+    const btn = document.createElement('button');
+    btn.className = 'text-xs text-blue-600 hover:text-blue-800';
+    btn.setAttribute('aria-label', `${oct}を選択`);
+    btn.textContent = '選択';
+    btn.onclick = e => { e.stopPropagation(); document.getElementById('octalInput').value = oct; fromOctal(); };
+    tdBtn.appendChild(btn);
+
+    [tdOct, tdRwx, tdDesc, tdBtn].forEach(td => tr.appendChild(td));
+    tbody.appendChild(tr);
+  });
+}
+
+renderQuickRef();
+fromOctal();
+</script>
+</body>
+</html>
